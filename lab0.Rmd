@@ -1,0 +1,70 @@
+
+#### LOADING DATA#####
+
+#to load the dataset
+```{r}
+cars <- read.delim2("/course/data/trade/car-imports.csv", sep = ",")
+
+```
+
+```{r}
+####DATA CLEANING
+#to convert to numerics
+cars$cif <- as.numeric(gsub(",", "", cars$cif)) # to remove , and convert to a numberic
+cars$vfd <- as.numeric(gsub(",", "", cars$vfd)) # to remove , and convert to a numberic
+#to format the date correctly
+cars$Month <- as.Date(paste(substr(cars$Month, 1,4), substr(cars$Month,5,6), "01", sep = "-"))
+
+```
+
+```{r}
+#### PLOT #####
+x <- sort(table(cars$Country)) #treated the column like a table and then sorted it.
+par(mar= c(2, 10, 0.25, 0.25)) #mar = margin(bottom, left, up, right)
+barplot(x, horiz = TRUE,las=1, cex.names=0.8)
+```
+
+```{r}
+#### Manupulating it further #####
+#focussing only on Germany
+cars_new <- subset(cars, Country =="Germany")
+str(cars_new)
+#converting vfd and cif into per Million NZD 
+cars_new$cif <- cars_new$cif/1000000
+cars_new$vfd <- cars_new$vfd/1000000
+head(cars_new)
+#order by Month
+cars_new <- cars_new[order(cars_new$Month),]#to create train dataset
+ntrain <- nrow(cars_new) *0.90
+gtrain <- cars_new[1:ntrain,]
+#to create test dataset 
+gtest <- cars_new[-(1:ntrain),]
+
+#baseline: Overall mean
+m0 <- mean(gtrain$vfd)
+```
+```{r}
+########## linear modelling #######
+#linear model
+m1 <- lm(vfd ~ Month, gtrain)
+
+#function for RMSE
+RMSE <- function(obs, pred) sqrt(mean((obs - pred)^2))
+
+#create obs
+obs <- gtest$vfd
+
+##global mean
+RMSE(obs,m0)
+
+#predict RMSE for linear model
+RMSE(obs,predict(m1,gtest))
+```
+```{r}
+### Visualising RMSE ######### 
+ plot(cars_new$Month, cars_new$vfd, ty='l',
+        main="Monthly Car Import Value from Germany",
+        xlab="Year", ylab="Value for Duty (in millions NZD)")
+ abline(h=m0, col=4, lwd=2)
+ abline(m1, col=2, lwd=2)
+```
